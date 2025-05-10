@@ -1,0 +1,10 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Scripts should use LF
+scripts/* text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+
+# Markdown files
+*.md text
