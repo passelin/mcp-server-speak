@@ -15,4 +15,6 @@ export default {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   testMatch: ["**/src/__tests__/**/*.test.(ts|tsx)"],
+  // Automatically mock the 'say' module in CI environments
+  setupFiles: ["<rootDir>/jest.setup.js"],
 };

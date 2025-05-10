@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { spawn } from "child_process";
-import { join } from "path";
 import { promisify } from "util";
 import type { ChildProcess } from "child_process";
 import * as path from "path";
@@ -42,10 +41,25 @@ class McpServerTester {
     return sleep(1000);
   }
 
-  // Stop the server
+  // Stop the server and clean up resources
   stopServer() {
     if (this.serverProcess) {
-      this.serverProcess.kill("SIGTERM");
+      try {
+        // Try to end all streams gracefully
+        if (this.serverProcess.stdin) {
+          this.serverProcess.stdin.end();
+        }
+
+        if (this.serverProcess.stdout) {
+          this.serverProcess.stdout.destroy();
+        }
+
+        // Kill the process
+        this.serverProcess.kill("SIGTERM");
+      } catch (err) {
+        console.error("Error cleaning up server process:", err);
+      }
+
       this.serverProcess = null;
     }
   }
@@ -81,34 +95,18 @@ class McpServerTester {
           // Get response as string
           const rawResponse = data.toString();
 
-          // Check if the response is valid JSON
-          try {
-            const response = JSON.parse(rawResponse) as McpResponse;
+          const response = JSON.parse(rawResponse) as McpResponse;
 
-            // Check if this is the response to our request
-            if (response.id === request.id) {
-              // Remove the listener to avoid handling other responses
-              if (this.serverProcess && this.serverProcess.stdout) {
-                this.serverProcess.stdout.removeListener(
-                  "data",
-                  responseHandler
-                );
-              }
-              resolve(response);
+          // Check if this is the response to our request
+          if (response.id === request.id) {
+            // Clear timeout to prevent memory leaks
+            clearTimeout(timeoutId);
+
+            // Remove the listener to avoid handling other responses
+            if (this.serverProcess && this.serverProcess.stdout) {
+              this.serverProcess.stdout.removeListener("data", responseHandler);
             }
-          } catch (jsonError) {
-            // If it looks like a debug message (not JSON), continue listening
-            if (
-              rawResponse.startsWith("Received request") ||
-              rawResponse.startsWith("Successfully spoke")
-            ) {
-              return; // Continue listening
-            }
-            reject(
-              new Error(
-                `Failed to parse response as JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}`
-              )
-            );
+            resolve(response);
           }
         } catch (error) {
           reject(
@@ -123,7 +121,7 @@ class McpServerTester {
       this.serverProcess.stdout.on("data", responseHandler);
 
       // Set timeout
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (this.serverProcess && this.serverProcess.stdout) {
           this.serverProcess.stdout.removeListener("data", responseHandler);
         }
@@ -180,8 +178,8 @@ describe("MCP Text-to-Speech Server", () => {
 
   // Test 4: Stop functionality
   test("Stopping speech mid-playback", async () => {
-    // Start a long speech
-    tester.sendRequest("speak", {
+    // Start a long speech - but make sure to await and store the promise
+    const speakPromise = tester.sendRequest("speak", {
       text: "This is a very long speech that should be interrupted. It continues for a while to ensure we have time to stop it.",
       speed: 0.8,
     });
@@ -193,6 +191,9 @@ describe("MCP Text-to-Speech Server", () => {
     const stopResponse = await tester.sendRequest("stop");
 
     expect(stopResponse.result?.content?.[0]?.text).toContain("Speech stopped");
+
+    // Make sure the first request completes or is handled
+    await speakPromise;
   }, 15000);
 
   // Test 5: Error handling (invalid parameters)
