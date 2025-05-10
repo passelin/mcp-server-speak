@@ -93,16 +93,19 @@ npm test
 This package uses [Semantic Versioning](https://semver.org/). To create a new release:
 
 1. Make sure all your changes follow [Conventional Commits](https://www.conventionalcommits.org/) format:
+
    - `feat: add new feature` (minor version bump)
    - `fix: resolve issue` (patch version bump)
    - `feat!: breaking change` or `BREAKING CHANGE: description` (major version bump)
 
    You can use the helper command to create properly formatted commits:
+
    ```bash
    npm run commit
    ```
 
 2. Use the npm version command to bump the version:
+
    ```bash
    npm version patch # for bug fixes (1.0.0 -> 1.0.1)
    npm version minor # for new features (1.0.0 -> 1.1.0)
@@ -110,12 +113,14 @@ This package uses [Semantic Versioning](https://semver.org/). To create a new re
    ```
 
 3. The version command will:
+
    - Update the package.json version
    - Automatically update CHANGELOG.md based on your commits
    - Create a git tag for the version
    - Commit these changes
 
 4. Push the changes and tag to GitHub:
+
    ```bash
    git push && git push --tags
    ```
