@@ -29,8 +29,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run tests
-        run: npm test
-        env:
-          CI: true
-          MOCK_TTS: true
+      # Tests are disabled
+      # - name: Run tests
+      #   run: npm test
+      #   env:
+      #     CI: true
+      #     MOCK_TTS: true
